@@ -1,0 +1,12 @@
+var args = WScript.Arguments;
+if (args.length < 2) {
+    WScript.Quit(1);
+}
+var entityId = args(0);
+var service = args(1);
+
+var xhr = new ActiveXObject("Microsoft.XMLHTTP");
+xhr.open("POST", "http://YOUR_HA_SERVER:8123/api/services/" + service, false);
+xhr.setRequestHeader("Authorization", "Bearer YOUR_HA_TOKEN_HERE");
+xhr.setRequestHeader("Content-Type", "application/json");
+xhr.send("{\"entity_id\":\"" + entityId + "\"}");

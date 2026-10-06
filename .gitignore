@@ -1,0 +1,22 @@
+# === Secrets ===
+# The live files below contain a Home Assistant long-lived access token.
+# Tracked .example copies hold placeholders — restore by copying each
+# .example to its real name and pasting your token (see README.md).
+@Resources/Settings.inc
+@Resources/ha-control.js
+@Resources/ha-control.ps1
+
+# === Rainmeter runtime state and OS junk ===
+*.bak
+Thumbs.db
+Desktop.ini
+Rainmeter.data
+Rainmeter.stats
+Rainmeter.ini
+
+# === Personal data ===
+# Live dump of every entity state (GPS, media titles, device IPs)
+states.md
+
+# === Agent tooling ===
+.kilo/

@@ -1,0 +1,23 @@
+param(
+    [string]$EntityId,
+    [string]$Service
+)
+
+$Server = "YOUR_HA_SERVER"
+$Token = "YOUR_HA_TOKEN_HERE"
+$Ssl = "false"
+$Port = "8123"
+
+$protocol = if ($Ssl -eq "true") { "https" } else { "http" }
+$url = "$protocol`://$Server`:$Port/api/services/$Service"
+
+$body = @{ entity_id = $EntityId } | ConvertTo-Json
+
+try {
+    Invoke-RestMethod -Uri $url -Method Post -Headers @{
+        "Authorization" = "Bearer $Token"
+        "Content-Type" = "application/json"
+    } -Body $body -ErrorAction Stop | Out-Null
+} catch {
+    # Silent fail
+}
