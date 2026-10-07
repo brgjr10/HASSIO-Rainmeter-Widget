@@ -5,8 +5,37 @@ if (args.length < 2) {
 var entityId = args(0);
 var service = args(1);
 
-var xhr = new ActiveXObject("Microsoft.XMLHTTP");
-xhr.open("POST", "http://YOUR_HA_SERVER:8123/api/services/" + service, false);
-xhr.setRequestHeader("Authorization", "Bearer YOUR_HA_TOKEN_HERE");
-xhr.setRequestHeader("Content-Type", "application/json");
-xhr.send("{\"entity_id\":\"" + entityId + "\"}");
+var HA_SERVER = "YOUR_HA_SERVER";
+var HA_TOKEN = "YOUR_HA_TOKEN_HERE";
+var HA_SSL = "false";
+var HA_PORT = "8123";
+
+var scheme = (HA_SSL === "true") ? "https" : "http";
+var url = scheme + "://" + HA_SERVER + ":" + HA_PORT + "/api/services/" + service.replace(/\./g, "/");
+
+function escapeJson(str) {
+    str = str.replace(/\\/g, "\\\\");
+    str = str.replace(/"/g, "\\\"");
+    str = str.replace(/\n/g, "\\n");
+    str = str.replace(/\r/g, "\\r");
+    str = str.replace(/\t/g, "\\t");
+    return str;
+}
+
+try {
+    var xhr = new ActiveXObject("MSXML2.ServerXMLHTTP.6.0");
+    xhr.open("POST", url, false);
+    xhr.setTimeouts(10000, 10000, 10000, 10000);
+    xhr.setRequestHeader("Authorization", "Bearer " + HA_TOKEN);
+    xhr.setRequestHeader("Content-Type", "application/json");
+    xhr.send("{\"entity_id\":\"" + escapeJson(entityId) + "\"}");
+    if (xhr.status >= 200 && xhr.status < 300) {
+        WScript.Quit(0);
+    } else {
+        WScript.Echo("Error: HA returned HTTP status " + xhr.status);
+        WScript.Quit(1);
+    }
+} catch (e) {
+    WScript.Echo("Error: HA unreachable - " + e.message);
+    WScript.Quit(1);
+}

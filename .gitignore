@@ -20,3 +20,6 @@ states.md
 
 # === Agent tooling ===
 .kilo/
+
+# === QA tooling ===
+.qa-tmp/
