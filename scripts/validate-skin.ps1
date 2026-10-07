@@ -33,17 +33,17 @@ if (-not (Test-Path $iniPath)) {
 }
 
 # --- Check 2: isInt=true only on guaranteed-integer measures ---
-# After fixes, only 3 active isInt=true remain (brightness, select, todo).
+# After fixes, only 6 active isInt=true remain (3 brightness, select, todo, effect speed).
 # Commented-out forecast measures (prefixed with ;) are excluded.
 if (Test-Path $iniPath) {
     $isIntActive = Select-String -Path $iniPath -Pattern '^[^;]*isInt=true' -AllMatches
     $isIntCount = $isIntActive.Matches.Count
     Write-Host "INFO: Found $isIntCount active occurrences of isInt=true" -ForegroundColor Yellow
-    if ($isIntCount -ne 3) {
-        Write-Host "FAIL: Expected 3 active isInt=true, found $isIntCount" -ForegroundColor Red
+    if ($isIntCount -ne 6) {
+        Write-Host "FAIL: Expected 6 active isInt=true, found $isIntCount" -ForegroundColor Red
         $failures++
     } else {
-        Write-Host "PASS: isInt=true count correct (3 active)" -ForegroundColor Green
+        Write-Host "PASS: isInt=true count correct (6 active)" -ForegroundColor Green
     }
 }
 
