@@ -130,3 +130,117 @@ function escapeJson(str) {
 4. Audit remaining `isInt=true` on select/todo entities (line 462 is highest risk)
 
 No blocking defects. The fixes are correct, complete for their stated scope, and introduce no regressions.
+
+---
+
+## 11. Post-Implementation Adversarial Review — T1–T9 (2026-10-08)
+
+**Review Date:** 2026-10-08  
+**Baseline Commit:** 855ea5c (T1–T9 complete)  
+**Scope:** Review of all 9 tasks implemented in `tomorrow.md`
+
+---
+
+### 11.1 New Findings from T1–T9 Implementation
+
+| ID | Severity | Description | File/Line | Blocking? |
+|---|---|---|---|---|
+| **ADV-001** | HIGH | LightControlMode close button `Hidden` inverted: `Hidden=(#LightControlMode# = 0)` → visible when mode=0, hidden when mode=1/2/3. Should be `<>` | `LiquidGlass.ini:1437` | **YES** |
+| **ADV-002** | HIGH | Brightness bar click uses `$MouseX$` directly (skin-relative 0-380) instead of bar-relative (0-120) mapped to 0-255. Bar at X=212/46, width=120px. Formula: `Clamp(Round(($MouseX$ - barX) / 120 * 255), 0, 255)` | `LiquidGlass.ini:1236,1365,1428` | **YES** |
+| **ADV-003** | MEDIUM | `ha-control.js` passes `serviceData` unescaped — caller must provide pre-escaped JSON. Current hardcoded swatches OK, but pattern is fragile for dynamic values. | `@Resources/ha-control.js:34-35` | NO |
+| **ADV-004** | LOW | Media prev/next triangles: 12px wide polygons with `X=0,Y=0`. Hit area = bounding box, but triangles small. Hard to click accurately. | `LiquidGlass.ini:1462+` | NO |
+| **ADV-005** | LOW | Lightstrip color: only 6 preset swatches. No custom picker. Feature gap. | `LiquidGlass.ini:1250+` | NO |
+| **ADV-006** | INFO | `TIME_FORMAT` and `UNIT_TEMP` in `LiquidGlass.ini` `[Variables]` but not in `Settings.inc.example` — users can't configure without editing INI. | `LiquidGlass.ini:96-97` | NO |
+| **ADV-007** | INFO | `wxcond.js` fallback: unknown codes fall through to raw slug (not "—"). | `@Resources/wxcond.js:22` | NO |
+
+---
+
+### 11.2 Fix Verification for New Code
+
+| Task | Code Area | Verified? | Issues |
+|---|---|---|---|
+| T1: Humidity layout | `LiquidGlass.ini:1078-1094` | ✅ | Correct position, label added |
+| T2: Weather condition | `@Resources/wxcond.js` | ✅ | Maps all standard HA codes; cscript syntax OK |
+| T4: Media prev/next | `LiquidGlass.ini:1462-1601` | ⚠️ | Triangles small (ADV-004); services correct |
+| T5: Light brightness/color | `LiquidGlass.ini:1126-1440` | ⚠️ | **Logic bug** in brightness click (ADV-002); color swatches work |
+| T6: 12/24h time | `@Resources/timeformat.js` | ✅ | cscript syntax OK; logic correct |
+| T7: °C/°F temp | `@Resources/tempformat.js` | ✅ | cscript syntax OK; conversion correct |
+| T8: Glass panel | `LiquidGlass.ini:915-932` | ✅ | Inner highlight/shadow; noise 40% |
+| T9: Performance | `LiquidGlass.ini` (all measures) | ✅ | 48 disabled; UpdateDivider consolidated; 5 new measures |
+
+---
+
+### 11.3 Blocking Defects (Must Fix Before Merge)
+
+1. **ADV-001 (HIGH):** Close button `Hidden` condition inverted — breaks light control UX entirely (close button never visible when needed)
+2. **ADV-002 (HIGH):** Brightness bar click sends raw mouse X (e.g., 212-332) as brightness (0-255) — sets brightness to ~83-130% instead of 0-100%. Feature non-functional.
+
+---
+
+### 11.4 Non-Blocking Issues
+
+3. **ADV-003 (MEDIUM):** `serviceData` escape gap — document or fix
+4. **ADV-004 (LOW):** Media triangle hit area — consider transparent overlay
+5. **ADV-005 (LOW):** Lightstrip color presets only — acceptable for v1
+6. **ADV-006 (INFO):** Config vars missing from `Settings.inc.example`
+7. **ADV-007 (INFO):** `wxcond.js` unknown code fallback
+
+---
+
+### 11.5 Regression Check (T1–T9 vs Baseline)
+
+| Area | Baseline | T1–T9 | Status |
+|------|----------|-------|--------|
+| Duplicate sections | 0 | 0 | ✅ |
+| Dangling MeasureName | 2 (MeasureWxStateWeb) | 0 | ✅ Fixed |
+| `isInt=true` count | 3 | 6 | ✅ Expected (+3 brightness) |
+| Unavailable handling | 4 light + 4 media | 4 light + 4 media | ✅ |
+| `ha-control.js` syntax | PASS | PASS | ✅ |
+| New JS files syntax | N/A | PASS | ✅ (4 files) |
+| Git secrets | 1 tracked file | 1 tracked file | ⚠️ Pre-existing |
+
+---
+
+### 11.6 Updated Verdict
+
+**NOT ready to merge** — 2 blocking HIGH defects (ADV-001, ADV-002) introduced in T5 implementation.
+
+**Required fixes before merge:**
+1. Fix `Hidden` condition on `[MeterLightCloseBtn]` line 1437: change `=` to `<>`
+2. Fix brightness bar click actions — implement bar-relative mouse position mapping to 0-255
+
+**Recommended (same PR):**
+3. Apply `escapeJson` to `serviceData` in `ha-control.js` or add validation
+4. Add `TIME_FORMAT` and `UNIT_TEMP` to `Settings.inc.example`
+5. Consider larger hit area for media triangles
+
+**Can defer:**
+6. Lightstrip custom color picker
+7. `wxcond.js` unknown code display
+
+---
+
+### 11.7 Suggested Fix for ADV-002 (Brightness Bar)
+
+Option A — Use a Script measure to compute brightness from mouse position:
+```ini
+[MeasureBrightnessFromClick]
+Measure=Script
+ScriptFile=#@#brightnessclick.js
+Parameter=$MouseX$
+```
+
+Option B — Use Calc measure with nested syntax (complex in Rainmeter):
+```ini
+[MeasureBrightnessCalc]
+Measure=Calc
+Formula=Clamp(Round(($MouseX$ - 212) / 120 * 255), 0, 255)
+DynamicVariables=1
+```
+
+Option C — Keep simple: use 4 brightness preset buttons (25%, 50%, 75%, 100%) instead of slider.
+
+---
+
+**Adversarial Reviewer Signature:** _Adversarial Code Review Agent_  
+**Date:** 2026-10-08

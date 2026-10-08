@@ -227,6 +227,72 @@ the runtime error is reproducible. Fixes should be verified by re-running cscrip
 ### Corrections to assumptions
 - None.
 
+---
+
+## 10. Post-Implementation Review — T1–T9 Completion (2026-10-08)
+
+### 10.1 New Findings from Implementation Review
+
+| Source ID | Severity | Description | File/Line | Wave | Effort |
+|---|---|---|---|---|---|
+| LIQUIDGLASS-017 | HIGH | LightControlMode close button `Hidden` condition inverted: `Hidden=(#LightControlMode# = 0)` should be `Hidden=(#LightControlMode# <> 0)` | `LiquidGlass.ini:1437` | 1 | S |
+| LIQUIDGLASS-018 | HIGH | Brightness bar click actions use `$MouseX$` directly (skin-relative X 0-380) instead of bar-relative mapped to 0-255. Bar at X=212/46, width=120px. | `LiquidGlass.ini:1236,1365,1428` | 1 | M |
+| LIQUIDGLASS-019 | MEDIUM | `ha-control.js` doesn't escape `serviceData` (3rd arg) — caller must provide pre-escaped JSON. Fragile pattern. | `@Resources/ha-control.js:34-35` | 1 | S |
+| LIQUIDGLASS-020 | LOW | Media prev/next triangle hit areas small (12px). Polygon with absolute coords + `X=0,Y=0` — clickable area is bounding box. | `LiquidGlass.ini:1462+` | 2 | S |
+| LIQUIDGLASS-021 | LOW | Lightstrip color: only 6 preset swatches, no custom picker. Feature gap. | `LiquidGlass.ini:1250+` | 3 | M |
+| LIQUIDGLASS-022 | INFO | Added 5 new Plugin measures (UpdateDivider=5): lightstrip brightness/color, living room/bedroom lamp brightness, light control mode. Net +5 HA polls/5s. Offset by 48 disabled measures. | `LiquidGlass.ini:251,263,274,286,1129` | — | — |
+| LIQUIDGLASS-023 | INFO | `TIME_FORMAT` and `UNIT_TEMP` variables in `LiquidGlass.ini` `[Variables]` but missing from `@Resources/Settings.inc.example` for user configuration. | `LiquidGlass.ini:96-97` | 2 | S |
+| LIQUIDGLASS-024 | INFO | `wxcond.js` maps HA condition codes to human text. Unknown codes fall through to raw code (not "—"). | `@Resources/wxcond.js` | — | — |
+
+### 10.2 Updated Totals by Severity (cumulative)
+
+| Severity | Count |
+|---|---|
+| CRITICAL | 0 |
+| HIGH | 4 (2 original + 2 new) |
+| MEDIUM | 4 (3 original + 1 new) |
+| LOW | 11 (9 original + 2 new) |
+| INFO | 9 (7 original + 2 new) |
+| **Total** | **28** |
+
+### 10.3 Updated Fix Wave Plan (including new findings)
+
+| Wave | Scope | Findings | Effort | Test? |
+|---|---|---|---|---|
+| 1 | Critical bugs | LIQUIDGLASS-017 (close button), LIQUIDGLASS-018 (brightness bar), LIQUIDGLASS-019 (serviceData escape) | S+M | cscript + visual |
+| 2 | Config & UX | LIQUIDGLASS-020 (media triangles), LIQUIDGLASS-023 (Settings.inc.example) | S | Visual |
+| 3 | Feature gaps | LIQUIDGLASS-021 (color picker) | M | Visual |
+| — | Monitoring | LIQUIDGLASS-022 (measure count), LIQUIDGLASS-024 (wxcond fallback) | — | — |
+
+### 10.4 Verification Results for T1–T9
+
+| Task | Validation | cscript syntax | Notes |
+|---|---|---|---|
+| T1: Humidity layout | PASS | N/A | Positioned below temp with label |
+| T2: Weather condition text | PASS | PASS | wxcond.js maps all HA codes |
+| T3: Push changes | PASS | N/A | Committed 855ea5c |
+| T4: Media prev/next | PASS | PASS | 8 new triangle meters |
+| T5: Light brightness/color | PASS* | PASS | *Logic bug in brightness click (018) |
+| T6: 12/24h time format | PASS | PASS | timeformat.js works |
+| T7: °C/°F temp units | PASS | PASS | tempformat.js works |
+| T8: Glass panel visual | PASS | N/A | Inner highlight/shadow, noise 40 |
+| T9: Performance | PASS | N/A | 48 measures disabled, UpdateDivider consolidated |
+
+> **Note:** T5 has a logic bug (LIQUIDGLASS-018) where brightness click sends raw mouse X instead of mapped 0-255 value. This must be fixed before the feature works correctly.
+
+### 10.5 Top 3 Immediate Fixes Required
+
+1. **LIQUIDGLASS-017 (HIGH):** Fix `Hidden` condition on close button (inverted logic)
+2. **LIQUIDGLASS-018 (HIGH):** Fix brightness bar click to map `$MouseX$` → 0-255 brightness
+3. **LIQUIDGLASS-019 (MEDIUM):** Apply `escapeJson` to `serviceData` in `ha-control.js` or document caller responsibility
+
+### 10.6 Questions for Owner (Updated)
+
+1. **Q:** Fix brightness bar mapping (018) — use `!CommandMeasure` with a Calc measure to compute value, or rewrite click action in JScript?
+2. **Q:** Add `TIME_FORMAT` and `UNIT_TEMP` to `Settings.inc.example` (023)?
+3. **Q:** Add custom color picker for lightstrip (021) or keep 6 presets?
+4. **Q:** Increase media triangle hit area (020) — use larger invisible click target over the triangles?
+
 ## 8. Pre-Existing Uncommitted Work Warning
 
 ```
